@@ -71,8 +71,17 @@ const getPublishes = async ({ force }) => {
   return publishPackages
 }
 
+const getVersion = async (workspace) => {
+  const value = await npm('pkg', 'get', 'version', workspace, { out: true })
+  return Object.values(JSON.parse(value))[0]
+}
+
+const setVersion = async (workspace, version) => {
+  await npm('pkg', 'set', `version=${version}`, workspace)
+}
+
 const main = async (opts) => {
-  const { smokePublish, packDestination } = opts
+  const { otp, dryRun, smokePublish, packDestination } = opts
 
   const hasPackDest = !!packDestination
   const publishes = await getPublishes({ force: smokePublish })
@@ -135,21 +144,27 @@ const main = async (opts) => {
       await npm(
         'pack',
         workspace,
-        opts.packDestination && `--pack-destination=${opts.packDestination}`
+        packDestination && `--pack-destination=${packDestination}`
       )
     }
 
     if (smokePublish) {
       // when we have a smoke test run we'd want to bump the version or else npm will throw an error even with dry-run
+      const version = await getVersion(workspace)
       await npm('version', 'prerelease', workspace, '--preid=smoke')
       await publishPkg('--dry-run')
+      await setVersion(workspace, version)
     } else {
       await publishPkg(
-        opts.dryRun && '--dry-run',
-        opts.otp && `--otp=${opts.otp === 'op' ? await op() : opts.otp}`
+        dryRun && '--dry-run',
+        otp && `--otp=${otp === 'op' ? await op() : otp}`
       )
     }
   }
+
+  // this is done to make sure package-lock.json is in a good state
+  await npm('prune', '--omit=dev', '--no-save', '--no-audit', '--no-fund')
+  await npm('install', '-w', 'docs', '--ignore-scripts', '--no-audit', '--no-fund')
 }
 
 const caughtMain = async (opts) => {
