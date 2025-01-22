@@ -146,4 +146,4 @@ const main = async (opts) => {
   }
 }
 
-run(main).catch(resetdeps)
+run(main)
