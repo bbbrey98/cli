@@ -136,7 +136,9 @@ const main = async (opts) => {
     await git.dirty()
   }
 
+  let count = -1
   for (const publish of publishes) {
+    log.info(`Publishing ${publish.name}@${publish.version} to ${publish.tag} ${count++}/${publishes.length}`)
     const workspace = publish.workspace && `--workspace=${publish.name}`
     const publishPkg = (...args) => npm('publish', workspace, `--tag=${publish.tag}`, ...args)
 
